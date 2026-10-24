@@ -45,3 +45,8 @@ dist/
 # Docker
 *.tar
 
+
+# Build / local files
+*.egg-info/
+mlflow.db
+inputImage.jpg

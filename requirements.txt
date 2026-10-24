@@ -22,5 +22,4 @@ pyyaml
 tqdm
 joblib
 Flask-Cors
-logging
 -e .

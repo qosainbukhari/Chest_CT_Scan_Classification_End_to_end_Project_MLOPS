@@ -1,133 +1,104 @@
-# End-to-End Chest Cancer Deep Learning Image Classification
+# Chest CT Scan Classification — End-to-End MLOps Pipeline
 
-## Project Overview
+Classifies chest CT scan images as **adenocarcinoma** (a type of lung cancer) or **normal** using transfer learning on VGG16. The project is built as a reproducible pipeline: DVC runs each stage, MLflow (on DagsHub) tracks experiments, and a Flask app serves predictions.
 
-This project implements a comprehensive, end-to-end deep learning pipeline for chest cancer detection using CT scan images. It is designed with production-ready practices and integrates MLOps workflows to ensure reproducibility, scalability, and maintainability.
+> Built while learning MLOps (based on a guided course project). I later found and fixed a data-leakage bug in the evaluation stage — details below.
 
----
+## Results
 
-## Step 1: Project Workflow
+| Metric (validation set) | Score |
+|---|---|
+| Accuracy | _update after `dvc repro`_ |
+| Loss | _update after `dvc repro`_ |
 
-The project follows a structured workflow to cover all stages from initialization to deployment:
+The numbers are in `scores.json` after running the pipeline.
 
-```bash
-1. Project Introduction & Objective
-2. GitHub Repository Setup
-3. Project Template Creation
-4. Project Environment Setup & Dependency Installation
-5. Logging & Custom Exception Module Implementation
-6. Project Flow & Workflow Design
-7. Component-wise Notebook Experiments
-8. Component-wise Modular Code Implementation
-9. Training Pipeline Development
-10. MLflow Integration for Experiment Tracking & Model Registration
-11. DVC Integration for Pipeline Tracking & Versioning
-12. Prediction Pipeline Development
-13. User Application Development
-14. Dockerization & Container Deployment
+### Bug I found and fixed: evaluation data leakage
+
+The first version reported **100% accuracy**, which was too good to be true.
+
+- Training used `validation_split=0.20` → images 0–20% of each class were validation, 20–100% were training.
+- Evaluation used `validation_split=0.30` → it evaluated on images 0–30%.
+- So **one third of the "evaluation" images had been seen during training.**
+
+Fix: one shared constant `VALIDATION_SPLIT` in `src/Cnnclassifier/constants/__init__.py`, used by both training and evaluation. Lesson: the train/validation split must be defined in exactly one place.
+
+## Pipeline
+
+```text
+Stage 1: Data Ingestion      download + unzip CT images (Google Drive → artifacts/)
+Stage 2: Prepare Base Model  VGG16 (ImageNet weights, frozen) + new softmax head
+Stage 3: Model Training      augmentation, 80/20 split, save trained_model.h5
+Stage 4: Evaluation          loss + accuracy → scores.json, logged to MLflow
 ```
 
----
-
-## Step 2: Environment Setup
+Run all stages (only changed stages re-run):
 
 ```bash
-# Create and activate Conda environment
-conda create -n chest_cancer_dl python=3.13.11 -y
-conda activate chest_cancer_dl
-
-# Install project dependencies
-pip install -r requirements.txt
-pip install -e .
-```
-
----
-
-## Step 3: GitHub Repository
-
-```bash
-# Repository Initialization
-git init
-# Add .gitignore
-# Setup CI/CD workflows in .github/workflows/
-# Organize code under src/ directory for modularity and scalability
-```
-
----
-
-## Step 4: Project Structure
-
-```bash
-.
-├── artifacts/          # Data, models, and evaluation results (DVC tracked)
-├── config/             # Configuration files (config.yaml)
-├── model/              # Local directory for saved trained models
-├── research/           # Jupyter notebooks for trials
-├── src/                # Source code
-│   └── cnnClassifier/
-│       ├── components/ # Modular steps (Ingestion, Training, etc.)
-│       ├── config/     # Configuration Manager
-│       ├── entity/     # Data classes (Config Entities)
-│       ├── pipeline/   # Stage-wise pipelines
-│       └── utils/      # Helper functions (logging, common utils)
-├── app.py              # Flask Application
-├── dvc.yaml            # DVC Pipeline definition
-├── main.py             # Entry point for the pipeline
-└── params.yaml         # Hyperparameters (Epochs, Batch size, etc.)
-```
-
----
-
-## Step 5: Tools & Technologies
-
-```bash
-Python 3.13.11
-Deep Learning (TensorFlow, Keras)
-MLflow for experiment tracking and model registry
-DVC for data and pipeline versioning
-Streamlit/Flask for user application
-Docker for containerization
-CI/CD deployment on AWS & Azure
-```
-
----
-
-## Step 6: setup file ,logging and Utiles 
-```bash
-✔ Requirements and setup.py configured
-✔ Centralized logging implemented
-✔ Common utility helper functions added
-```
-
-## Step 6: project workflow
-```bash
-update config.yml
-update params.yml
-update the entity
-update the configuration manager in src config
-update the components
-update pipeline
-update main.py
-update the dvc.yml
-
-```
-
-## Step 7: DVC tracking 
-```bash
-
-set MLFLOW_TRACKING_URI=https://dagshub.com/yourlink
-set MLFLOW_TRACKING_USERNAME=youname
-set MLFLOW_TRACKING_PASSWORD=Password
-
-dvc init
 dvc repro
-dvc dag
+dvc dag      # show the stage graph
 ```
 
-## Step 8: prediction and user app
- ```bash
- user application using flask
- app.py
- 
+## Model
 
- ```
+| Setting | Value |
+|---|---|
+| Base model | VGG16, ImageNet weights, top removed, base frozen |
+| Input size | 224 × 224 × 3 |
+| Head | Flatten → Dropout(0.5) → Dense(2, softmax) |
+| Optimizer | Adam, learning rate 0.01 |
+| Epochs / batch size | 5 / 16 |
+| Augmentation | rotation, flip, shift, shear, zoom |
+
+All hyperparameters are in `params.yaml`.
+
+## Project structure
+
+```text
+config/config.yaml          paths for every stage
+params.yaml                 hyperparameters
+dvc.yaml                    pipeline stage definitions
+src/Cnnclassifier/
+├── components/             ingestion, base model, training, evaluation
+├── config/configuration.py reads YAML → typed config objects
+├── entity/                 config dataclasses
+├── pipelines/              stage_01 … stage_04 + prediction
+└── utils/                  YAML/JSON helpers, base64 image decoding
+research/                   notebooks used to prototype each stage
+app.py                      Flask app: upload an image → prediction
+```
+
+## Run it
+
+```bash
+git clone https://github.com/QosainBukhari/Chest_CT_Scan_Classification_End_to_end_Project_MLOPS.git
+cd Chest_CT_Scan_Classification_End_to_end_Project_MLOPS
+conda create -n chest python=3.11 -y
+conda activate chest
+pip install -r requirements.txt
+```
+
+MLflow tracking on DagsHub (optional) — set these as environment variables, never in code:
+
+```bash
+export MLFLOW_TRACKING_URI=https://dagshub.com/<user>/<repo>.mlflow
+export MLFLOW_TRACKING_USERNAME=<user>
+export MLFLOW_TRACKING_PASSWORD=<token>
+```
+
+Train and start the app:
+
+```bash
+dvc repro
+python app.py        # open http://localhost:8080
+```
+
+## Tech stack
+
+Python · TensorFlow/Keras · VGG16 · DVC · MLflow · DagsHub · Flask
+
+## Limitations
+
+- Small dataset and only two classes; this is a learning project, **not** a medical tool.
+- No test set separate from validation yet; next step is a held-out test split and a confusion matrix.
+- Grad-CAM heatmaps (to show which region drives the prediction) are planned.

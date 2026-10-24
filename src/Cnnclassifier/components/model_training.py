@@ -1,4 +1,5 @@
 import tensorflow as tf
+from Cnnclassifier.constants import VALIDATION_SPLIT
 from pathlib import Path
 from Cnnclassifier.entity.config_entity import ModelTrainingConfig
 
@@ -21,7 +22,7 @@ class Training:
 
         datagenerator_kwargs = dict(
             rescale=1.0 / 255,
-            validation_split=0.20
+            validation_split=VALIDATION_SPLIT
         )
 
         dataflow_kwargs = dict(

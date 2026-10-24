@@ -1,17 +1,17 @@
 stages:
   data_ingestion:
-    cmd: python src/cnnClassifier/pipelines/stage_01.py
+    cmd: python src/Cnnclassifier/pipelines/stage_01.py
     deps:
-      - src/cnnClassifier/pipelines/stage_01.py
+      - src/Cnnclassifier/pipelines/stage_01.py
       - config/config.yaml
     outs:
       - artifacts/data_ingestion/Chest-CT-Scan-data
 
 
   prepare_base_model:
-    cmd: python src/cnnClassifier/pipelines/stage_02.py
+    cmd: python src/Cnnclassifier/pipelines/stage_02.py
     deps:
-      - src/cnnClassifier/pipelines/stage_02.py
+      - src/Cnnclassifier/pipelines/stage_02.py
       - config/config.yaml
     params:
       - IMAGE_SIZE
@@ -24,9 +24,9 @@ stages:
 
 
   model_training:
-    cmd: python src/cnnClassifier/pipelines/stage_03.py
+    cmd: python src/Cnnclassifier/pipelines/stage_03.py
     deps:
-      - src/cnnClassifier/pipelines/stage_03.py
+      - src/Cnnclassifier/pipelines/stage_03.py
       - config/config.yaml
       - artifacts/data_ingestion/Chest-CT-Scan-data
       - artifacts/base_model
@@ -40,9 +40,9 @@ stages:
 
 
   evaluation:
-    cmd: python src/cnnClassifier/pipelines/stage_04.py
+    cmd: python src/Cnnclassifier/pipelines/stage_04.py
     deps:
-      - src/cnnClassifier/pipelines/stage_04.py
+      - src/Cnnclassifier/pipelines/stage_04.py
       - config/config.yaml
       - artifacts/data_ingestion/Chest-CT-Scan-data
       - artifacts/model_training/trained_model.h5

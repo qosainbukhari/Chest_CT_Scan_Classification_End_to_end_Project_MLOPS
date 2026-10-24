@@ -1,4 +1,5 @@
 import tensorflow as tf
+from Cnnclassifier.constants import VALIDATION_SPLIT
 from pathlib import Path
 import mlflow
 import mlflow.keras
@@ -12,7 +13,7 @@ class Evaluation:
     def _valid_generator(self):
         datagenerator_kwargs = dict(
             rescale = 1./255,
-            validation_split=0.30
+            validation_split=VALIDATION_SPLIT
         )
 
         dataflow_kwargs = dict(
